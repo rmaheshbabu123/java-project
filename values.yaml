@@ -1,0 +1,104 @@
+# values.yaml outlines Kubernetes configuration for this app
+# These values are passed into an applications Kubernetes configuration yamls 
+# You can pass in enviroment variables to be set, URL mappings, service types, etc to an applications kubernetes deployment
+
+
+##############################################################################################################################
+# Application Enviroment variables to pass in at deployment:
+##############################################################################################################################
+env:
+- name: DynamicMessage
+  value: Hi
+  
+- name: SPRING_PROFILES_ACTIVE
+  value: dev,local
+
+- name: AWS_XRAY_DAEMON_ADDRESS 
+  value: xray-service:2000
+- name: REDIS_HOST
+  value: accum-reference-data.aixorp.0001.use1.cache.amazonaws.com
+- name: REDIS_PORT
+  value: "6379"
+- name: REDIS_TIMEOUT
+  value: "30"
+- name: HTTP_CONNECT_TIMEOUT
+  value: "10000"
+- name: HTTP_READ_TIMEOUT
+  value: "10000"
+
+##############################################################################################################################
+# Ambassador Mappings:
+# service and name are automatically set by the pipeline
+# prefix is unchanged if master. For branches the prefix is /prefix-deployment-name 
+##############################################################################################################################
+annotations:
+  service.beta.kubernetes.io/aws-load-balancer-internal: 30.0.0.0/8
+  getambassador.io/config:
+    - apiVersion: ambassador/v0
+      kind: Mapping
+      name: bootcamp2
+      prefix: /bootcamp2
+      rewrite: /
+      service: none
+      timeout_ms: 20000
+      
+
+##############################################################################################################################
+# Replica count outlines how many pods to run with a deployment. (e.g. "replicaCount: 2" 2 pods are deployed and each receieves
+# half of the requests coming into the application
+##############################################################################################################################
+replicaCount: 1
+
+##############################################################################################################################
+# Docker config for a deployment
+# Repository and Tag are passed in from Jenkins
+# pullPolicy controls how Kubernetes will pull docker images from ECR at deploy time
+#   - Always: Pull image from ECR everytime
+#   - IfNotPresent: Only pull image from ECR if it hasnt been pulled before
+#     - This can introduce a bug where you push a docker image with the same tag as a previous image and Kubernetes will not
+#        know to pull the updated docker image
+#   - Never: I dont know why we would ever use 
+##############################################################################################################################
+image:
+  repository: 649370421000.dkr.ecr.us-east-1.amazonaws.com/bootcamp2
+  tag: 0.0.1
+  pullPolicy: IfNotPresent
+  
+##############################################################################################################################
+# Configuration for the Kubernetes Service:
+# Types: LoadBalancer, NodePort, ClusterIP
+# LoadBalancer will create an AWS ELB so application can be accessed externally (From  Network)
+##############################################################################################################################
+service:
+  type: LoadBalancer
+  port: 80
+
+##############################################################################################################################
+# Kubernetes resource limits and requests for an applications pod.
+##############################################################################################################################
+resources:
+  limits:
+    cpu: 2
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+##############################################################################################################################
+# NodeSelector, Toleration and Affinity define configurations to specify which worker node this apps pods are deployed to
+#   - NodeSelector: map of key-value pairs that match up to a Nodes corresponding key-value pair
+#   - Tolerations: Used in conjunction with Node Taints, configuring which Nodes a pods SHOULDN'T run on
+#   - Affinity: Similar to NodeSelector, but more complex (Just use NodeSelector)
+##############################################################################################################################
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+ports:
+- name: http
+  containerPort: 8080
+  protocol: TCP
+
+
